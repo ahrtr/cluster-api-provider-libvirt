@@ -159,13 +159,14 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 		} else if err != nil {
 			return fmt.Errorf("failed to read a line from filesystem list, %s", err)
 		}
+		glog.Infof("Read lind: %s", line)
 
 		diskAndFormat := strings.Split(line, ":")
 		if len(diskAndFormat) != 2 {
 			return fmt.Errorf("invalid filesystem format: %s", line)
 		}
 
-		if diskAndFormat[1] == "ext4" {
+		if strings.TrimSpace(diskAndFormat[1]) == "ext4" {
 			bootDisk = diskAndFormat[0]
 			break
 		}
