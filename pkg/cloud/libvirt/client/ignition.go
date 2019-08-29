@@ -243,7 +243,10 @@ func startCmd(args ...string) (string, error) {
 		return "", errors.Wrapf(err, "error starting command '%v %v'", executable, strings.Join(args, " "))
 	}
 
-	return readOutput(stdout)
+	outMsg, err := readOutput(stdout)
+	glog.Infof("output message: %s", outMsg)
+
+	return outMsg, err
 }
 
 func readOutput(stream io.ReadCloser) (string, error) {
