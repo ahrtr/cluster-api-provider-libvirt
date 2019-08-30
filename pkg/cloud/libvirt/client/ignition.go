@@ -194,7 +194,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 
 func execCmd(useRoot bool, env []string, args ...string) (string, error) {
 	cmd := genCmd(useRoot, env, args...)
-	glog.Infof("Running: %v %v", cmd.Path, cmd.Args)
+	glog.Infof("Running: %v", cmd.Args)
 
 	cmdOut, err := cmd.CombinedOutput()
 	glog.Infof("Ran: %v Output: %v", cmd.Args, string(cmdOut))
