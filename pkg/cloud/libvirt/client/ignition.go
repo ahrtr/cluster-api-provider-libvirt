@@ -101,7 +101,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *     guestfish --listen -a ${volumeFilePath}
 	 *
 	 * output example:
-	 *  	   GUESTFISH_PID=4513; export GUESTFISH_PID
+	 *     GUESTFISH_PID=4513; export GUESTFISH_PID
 	 */
 	args := []string{"--listen", "-a", domainDef.Devices.Disks[0].Source.File.File}
 	output, err := startCmd(true, nil, args...)
@@ -134,7 +134,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *     findfs-label boot
 	 *
 	 * output example:
-	 *		/dev/sda1
+	 *     /dev/sda1
 	 */
 	args = []string{"--remote", "--", "findfs-label", "boot"}
 	output, err = execCmd(true, env, args...)
