@@ -197,9 +197,9 @@ func execCmd(useRoot bool, env []string, args ...string) (string, error) {
 	glog.Infof("Running: %v %v", cmd.Path, cmd.Args)
 
 	cmdOut, err := cmd.CombinedOutput()
-	glog.Infof("Ran: %v %v Output: %v", cmd.Path, cmd.Args, string(cmdOut))
+	glog.Infof("Ran: %v Output: %v", cmd.Args, string(cmdOut))
 	if err != nil {
-		err = errors.Wrapf(err, "error running command '%v %v'", cmd.Path, strings.Join(cmd.Args, " "))
+		err = errors.Wrapf(err, "error running command '%v'", strings.Join(cmd.Args, " "))
 	}
 	return string(cmdOut), err
 }
@@ -207,20 +207,20 @@ func execCmd(useRoot bool, env []string, args ...string) (string, error) {
 // startCmd starts the command, and doesn't wait for it to complete
 func startCmd(useRoot bool, env []string, args ...string) (string, error) {
 	cmd := genCmd(useRoot, env, args...)
-	glog.Infof("Starting: %v %v", cmd.Path, cmd.Args)
+	glog.Infof("Starting: %v", cmd.Args)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", errors.Wrapf(err, "error getting stdout pipe for command '%v %v'", cmd.Path, strings.Join(cmd.Args, " "))
+		return "", errors.Wrapf(err, "error getting stdout pipe for command '%v'", strings.Join(cmd.Args, " "))
 	}
 	err = cmd.Start()
 	glog.Infof("Started: %v %v", cmd.Path, cmd.Args)
 	if err != nil {
-		return "", errors.Wrapf(err, "error starting command '%v %v'", cmd.Path, strings.Join(cmd.Args, " "))
+		return "", errors.Wrapf(err, "error starting command '%v'", strings.Join(cmd.Args, " "))
 	}
 
 	outMsg, err := readOutput(stdout)
-	glog.Infof("output message: %s", outMsg)
+	glog.Infof("Output message: %s", outMsg)
 
 	return outMsg, err
 }
