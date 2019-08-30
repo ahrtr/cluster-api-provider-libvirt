@@ -133,7 +133,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 * Get the boot filesystem, execute the following command,
 	 *     findfs-label boot
 	 *
-	 *	output example:
+	 * output example:
 	 *		/dev/sda1
 	 */
 	args = []string{"--remote", "--", "findfs-label", "boot"}
