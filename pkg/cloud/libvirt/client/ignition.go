@@ -104,7 +104,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *  	   GUESTFISH_PID=4513; export GUESTFISH_PID
 	 */
 	args := []string{"--listen", "-a", domainDef.Devices.Disks[0].Source.File.File}
-	output, err := startCmd(args...)
+	output, err := startCmd(true, nil, args...)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *     guestfish --remote -- run
 	 */
 	args = []string{"--remote", "--", "run"}
-	_, err = execCmd(env, args...)
+	_, err = execCmd(true, env, args...)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *		/dev/sda4: xfs
 	 */
 	args = []string{"--remote", "--", "list-filesystems"}
-	output, err = execCmd(env, args...)
+	output, err = execCmd(true, env, args...)
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *     guestfish --remote -- mount ${boot_filesystem} /
 	 */
 	args = []string{"--remote", "--", "mount", bootDisk, "/"}
-	_, err = execCmd(env, args...)
+	_, err = execCmd(true, env, args...)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 * The target path is hard coded as "/ignition/config.ign" for now
 	 */
 	args = []string{"--remote", "--", "upload", ignitionFile, "/ignition/config.ign"}
-	_, err = execCmd(env, args...)
+	_, err = execCmd(true, env, args...)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *     guestfish --remote -- umount-all
 	 */
 	args = []string{"--remote", "--", "umount-all"}
-	_, err = execCmd(env, args...)
+	_, err = execCmd(true, env, args...)
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *     guestfish --remote -- exit
 	 */
 	args = []string{"--remote", "--", "exit"}
-	_, err = execCmd(env, args...)
+	_, err = execCmd(true, env, args...)
 	if err != nil {
 		return err
 	}
@@ -217,34 +217,53 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	return nil
 }
 
-func execCmd(env []string, args ...string) (string, error) {
-	const executable = "guestfish"
-	glog.Infof("Running: %v %v", executable, args)
-	cmd := exec.Command(executable, args...)
+func execCmd(useRoot bool, env []string, args ...string) (string, error) {
+	executable := "guestfish"
+	newArgs := []string{}
+	if useRoot {
+		newArgs = append(newArgs, executable)
+		newArgs = append(newArgs, args...)
+		executable = "sudo"
+	} else {
+		newArgs = args
+	}
+	glog.Infof("Running: %v %v", executable, newArgs)
+	cmd := exec.Command(executable, newArgs...)
 	if env != nil && len(env) > 0 {
 		cmd.Env = env
 	}
 	cmdOut, err := cmd.CombinedOutput()
-	glog.Infof("Ran: %v %v Output: %v", executable, args, string(cmdOut))
+	glog.Infof("Ran: %v %v Output: %v", executable, newArgs, string(cmdOut))
 	if err != nil {
-		err = errors.Wrapf(err, "error running command '%v %v'", executable, strings.Join(args, " "))
+		err = errors.Wrapf(err, "error running command '%v %v'", executable, strings.Join(newArgs, " "))
 	}
 	return string(cmdOut), err
 }
 
 // startCmd starts the command, and doesn't wait for it to complete
-func startCmd(args ...string) (string, error) {
-	const executable = "guestfish"
-	glog.Infof("Starting: %v %v", executable, args)
-	cmd := exec.Command(executable, args...)
+func startCmd(useRoot bool, env []string, args ...string) (string, error) {
+	executable := "guestfish"
+	newArgs := []string{}
+	if useRoot {
+		newArgs = append(newArgs, executable)
+		newArgs = append(newArgs, args...)
+		executable = "sudo"
+	} else {
+		newArgs = args
+	}
+	glog.Infof("Starting: %v %v", executable, newArgs)
+	cmd := exec.Command(executable, newArgs...)
+	if env != nil && len(env) > 0 {
+		cmd.Env = env
+	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", errors.Wrapf(err, "error getting stdout pipe for command '%v %v'", executable, strings.Join(args, " "))
+		return "", errors.Wrapf(err, "error getting stdout pipe for command '%v %v'", executable, strings.Join(newArgs, " "))
 	}
 	err = cmd.Start()
-	glog.Infof("Started: %v %v", executable, args)
+	glog.Infof("Started: %v %v", executable, newArgs)
 	if err != nil {
-		return "", errors.Wrapf(err, "error starting command '%v %v'", executable, strings.Join(args, " "))
+		return "", errors.Wrapf(err, "error starting command '%v %v'", executable, strings.Join(newArgs, " "))
 	}
 
 	outMsg, err := readOutput(stdout)
