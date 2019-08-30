@@ -114,17 +114,17 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 		return fmt.Errorf("Invalid output when starting guestfish: %s", output)
 	}
 	strArray1 := strings.Split(strArray[0], "=")
-	if len(strArray) != 2 {
+	if len(strArray1) != 2 {
 		return fmt.Errorf("failed to get the guestfish PID from %s", output)
 	}
-	os.Setenv(strArray1[0], strArray1[1])
+	env := []string{strArray[0]}
 
 	/*
 	 * Launch guestfish, execute the following command,
 	 *     guestfish --remote -- run
 	 */
 	args = []string{"--remote", "--", "run"}
-	_, err = execCmd(args...)
+	_, err = execCmd(env, args...)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *		/dev/sda4: xfs
 	 */
 	args = []string{"--remote", "--", "list-filesystems"}
-	output, err = execCmd(args...)
+	output, err = execCmd(env, args...)
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *     guestfish --remote -- mount ${boot_filesystem} /
 	 */
 	args = []string{"--remote", "--", "mount", bootDisk, "/"}
-	_, err = execCmd(args...)
+	_, err = execCmd(env, args...)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 * The target path is hard coded as "/ignition/config.ign" for now
 	 */
 	args = []string{"--remote", "--", "upload", ignitionFile, "/ignition/config.ign"}
-	_, err = execCmd(args...)
+	_, err = execCmd(env, args...)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *     guestfish --remote -- umount-all
 	 */
 	args = []string{"--remote", "--", "umount-all"}
-	_, err = execCmd(args...)
+	_, err = execCmd(env, args...)
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	 *     guestfish --remote -- exit
 	 */
 	args = []string{"--remote", "--", "exit"}
-	_, err = execCmd(args...)
+	_, err = execCmd(env, args...)
 	if err != nil {
 		return err
 	}
@@ -217,10 +217,13 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 	return nil
 }
 
-func execCmd(args ...string) (string, error) {
+func execCmd(env []string, args ...string) (string, error) {
 	const executable = "guestfish"
 	glog.Infof("Running: %v %v", executable, args)
 	cmd := exec.Command(executable, args...)
+	if env != nil && len(env) > 0 {
+		cmd.Env = env
+	}
 	cmdOut, err := cmd.CombinedOutput()
 	glog.Infof("Ran: %v %v Output: %v", executable, args, string(cmdOut))
 	if err != nil {
