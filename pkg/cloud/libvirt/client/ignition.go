@@ -193,58 +193,53 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 }
 
 func execCmd(useRoot bool, env []string, args ...string) (string, error) {
-	executable := "guestfish"
-	newArgs := []string{}
-	if useRoot {
-		newArgs = append(newArgs, executable)
-		newArgs = append(newArgs, args...)
-		executable = "sudo"
-	} else {
-		newArgs = args
-	}
-	glog.Infof("Running: %v %v", executable, newArgs)
-	cmd := exec.Command(executable, newArgs...)
-	if env != nil && len(env) > 0 {
-		cmd.Env = env
-	}
+	cmd := genCmd(useRoot, env, args...)
+	glog.Infof("Running: %v %v", cmd.Path, cmd.Args)
+
 	cmdOut, err := cmd.CombinedOutput()
-	glog.Infof("Ran: %v %v Output: %v", executable, newArgs, string(cmdOut))
+	glog.Infof("Ran: %v %v Output: %v", cmd.Path, cmd.Args, string(cmdOut))
 	if err != nil {
-		err = errors.Wrapf(err, "error running command '%v %v'", executable, strings.Join(newArgs, " "))
+		err = errors.Wrapf(err, "error running command '%v %v'", cmd.Path, strings.Join(cmd.Args, " "))
 	}
 	return string(cmdOut), err
 }
 
 // startCmd starts the command, and doesn't wait for it to complete
 func startCmd(useRoot bool, env []string, args ...string) (string, error) {
-	executable := "guestfish"
-	newArgs := []string{}
-	if useRoot {
-		newArgs = append(newArgs, executable)
-		newArgs = append(newArgs, args...)
-		executable = "sudo"
-	} else {
-		newArgs = args
-	}
-	glog.Infof("Starting: %v %v", executable, newArgs)
-	cmd := exec.Command(executable, newArgs...)
-	if env != nil && len(env) > 0 {
-		cmd.Env = env
-	}
+	cmd := genCmd(useRoot, env, args...)
+	glog.Infof("Starting: %v %v", cmd.Path, cmd.Args)
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", errors.Wrapf(err, "error getting stdout pipe for command '%v %v'", executable, strings.Join(newArgs, " "))
+		return "", errors.Wrapf(err, "error getting stdout pipe for command '%v %v'", cmd.Path, strings.Join(cmd.Args, " "))
 	}
 	err = cmd.Start()
-	glog.Infof("Started: %v %v", executable, newArgs)
+	glog.Infof("Started: %v %v", cmd.Path, cmd.Args)
 	if err != nil {
-		return "", errors.Wrapf(err, "error starting command '%v %v'", executable, strings.Join(newArgs, " "))
+		return "", errors.Wrapf(err, "error starting command '%v %v'", cmd.Path, strings.Join(cmd.Args, " "))
 	}
 
 	outMsg, err := readOutput(stdout)
 	glog.Infof("output message: %s", outMsg)
 
 	return outMsg, err
+}
+
+func genCmd(useRoot bool, env []string, args ...string) *exec.Cmd {
+	executable := "guestfish"
+	newArgs := []string{}
+	if useRoot {
+		newArgs = append(newArgs, []string{"--preserve-env", executable}...)
+		newArgs = append(newArgs, args...)
+		executable = "sudo"
+	} else {
+		newArgs = args
+	}
+	cmd := exec.Command(executable, newArgs...)
+	if env != nil && len(env) > 0 {
+		cmd.Env = env
+	}
+	return cmd
 }
 
 func readOutput(stream io.ReadCloser) (string, error) {
