@@ -214,7 +214,7 @@ func startCmd(useRoot bool, env []string, args ...string) (string, error) {
 		return "", errors.Wrapf(err, "error getting stdout pipe for command '%v'", strings.Join(cmd.Args, " "))
 	}
 	err = cmd.Start()
-	glog.Infof("Started: %v %v", cmd.Path, cmd.Args)
+	glog.Infof("Started: %v", cmd.Args)
 	if err != nil {
 		return "", errors.Wrapf(err, "error starting command '%v'", strings.Join(cmd.Args, " "))
 	}
