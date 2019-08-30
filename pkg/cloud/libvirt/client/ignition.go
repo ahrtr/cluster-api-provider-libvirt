@@ -131,45 +131,20 @@ func injectIgnitionByGuestfish(domainDef *libvirtxml.Domain, ignitionFile string
 
 	/*
 	 * Get the boot filesystem, execute the following command,
-	 *     guestfish --remote -- list-filesystems
+	 *     findfs-label boot
 	 *
 	 *	output example:
-	 *		/dev/sda1: ext4
-	 *		/dev/sda2: vfat
-	 *		/dev/sda3: unknown
-	 *		/dev/sda4: xfs
+	 *		/dev/sda1
 	 */
-	args = []string{"--remote", "--", "list-filesystems"}
+	args = []string{"--remote", "--", "findfs-label", "boot"}
 	output, err = execCmd(true, env, args...)
 	if err != nil {
 		return err
 	}
 
-	var buf bytes.Buffer
-	_, err = buf.WriteString(output)
-	if err != nil {
-		return fmt.Errorf("failed to save the filesystems list, %s", err)
-	}
-
-	var bootDisk string
-	for {
-		line, err := buf.ReadString(byte('\n'))
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return fmt.Errorf("failed to read a line from filesystem list, %s", err)
-		}
-		glog.Infof("Read lind: %s", line)
-
-		diskAndFormat := strings.Split(line, ":")
-		if len(diskAndFormat) != 2 {
-			return fmt.Errorf("invalid filesystem format: %s", line)
-		}
-
-		if strings.TrimSpace(diskAndFormat[1]) == "ext4" {
-			bootDisk = diskAndFormat[0]
-			break
-		}
+	bootDisk := strings.TrimSpace(output)
+	if len(bootDisk) == 0 {
+		return fmt.Errorf("failed to get the boot filesystem")
 	}
 
 	/*
